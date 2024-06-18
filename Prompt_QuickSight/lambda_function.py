@@ -65,7 +65,17 @@ def lambda_handler(event, context):
         
         database = 'datos-demograficos'
         catalog = 'AwsDataCatalog'
+        #________________________________________________________
+        s3_client = boto3.client('s3')
+        bucket_name = 'foa-prod-analitycs-data-storage-bucket'
+        folder_prefix = 'datos-demograficos/consulta-resultados/'
         
+        objects_to_delete = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=folder_prefix)
+        if 'Contents' in objects_to_delete:
+            delete_keys = {'Objects': [{'Key': obj['Key']} for obj in objects_to_delete['Contents']]}
+            s3_client.delete_objects(Bucket=bucket_name, Delete=delete_keys)
+        
+        #________________________________________________________
         athena_client = boto3.client('athena')
         QueryResponse = athena_client.start_query_execution(
             QueryString=query,
@@ -74,7 +84,7 @@ def lambda_handler(event, context):
                 'Catalog': catalog
             },
             ResultConfiguration={
-                'OutputLocation': 's3://foa-prod-analitycs-data-storage-bucket/datos-demograficos/'
+                'OutputLocation': 's3://foa-prod-analitycs-data-storage-bucket/datos-demograficos/consulta-resultados'
             }
         )
         QueryID = QueryResponse['QueryExecutionId']
